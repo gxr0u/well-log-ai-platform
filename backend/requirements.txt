@@ -9,3 +9,4 @@ lasio
 boto3
 scikit-learn
 groq
+python-dotenv
