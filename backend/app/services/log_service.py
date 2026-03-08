@@ -8,26 +8,34 @@ from app.models.well_log_data import WellLogData
 
 
 def store_log_data(db: Session, well_id: int, dataframe: pd.DataFrame) -> int:
+    """Fast bulk insert using pandas melt."""
+
     if dataframe.empty:
         return 0
 
     curves = [c for c in dataframe.columns if c != "depth"]
+    if not curves:
+        return 0
 
-    records = []
+    # reshape dataframe
+    melted = dataframe.melt(
+        id_vars=["depth"],
+        value_vars=curves,
+        var_name="curve_name",
+        value_name="value",
+    )
 
-    for _, row in dataframe.iterrows():
-        depth = row["depth"]
+    # drop NaNs
+    melted = melted.dropna(subset=["value"])
 
-        for curve in curves:
-            records.append({
-                "well_id": well_id,
-                "depth": float(depth),
-                "curve_name": curve,
-                "value": None if pd.isna(row[curve]) else float(row[curve]),
-            })
+    # add well_id
+    melted["well_id"] = well_id
 
+    # convert to records
+    records = melted.to_dict("records")
+
+    # bulk insert
     db.bulk_insert_mappings(WellLogData, records)
-    db.commit()
 
     return len(records)
 
