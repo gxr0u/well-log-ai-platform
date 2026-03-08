@@ -15,7 +15,8 @@ from app.services.s3_service import upload_file_to_s3
 
 router = APIRouter(prefix="", tags=["upload"])
 
-LOCAL_UPLOAD_DIR = Path("uploads")
+LOCAL_UPLOAD_DIR = Path("/tmp/uploads")
+LOCAL_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _store_file_locally(source_path: str, filename: str) -> str:
