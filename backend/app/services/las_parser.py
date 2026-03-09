@@ -21,13 +21,13 @@ def parse_las_file(file_path: str | Path) -> tuple[pd.DataFrame, list[str]]:
     if dataframe.empty:
         raise ValueError("LAS file contains no log data rows")
 
-    # Normalize depth column name for the rest of the pipeline.
-    dataframe.columns = [c.lower() for c in dataframe.columns]
+    dataframe.columns = (
+    dataframe.columns
+    .str.lower()
+    .str.replace(" ", "_")
+    )
 
-    if "dept" in dataframe.columns and "depth" not in dataframe.columns:
-        dataframe.rename(columns={"dept": "depth"}, inplace=True)
-    original_depth_col = dataframe.columns[0]
-    dataframe = dataframe.rename(columns={original_depth_col: "depth"})
+    dataframe.rename(columns={dataframe.columns[0]: "depth"}, inplace=True)
 
     # Ensure numeric values for depth and curve columns.
     dataframe["depth"] = pd.to_numeric(dataframe["depth"], errors="coerce")
