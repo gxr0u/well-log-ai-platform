@@ -13,12 +13,16 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 class LimitUploadSize(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        max_size = 50 * 1024 * 1024  # 50MB
-        if int(request.headers.get("content-length", 0)) > max_size:
+        max_size = 50 * 1024 * 1024
+
+        content_length = request.headers.get("content-length")
+
+        if content_length and int(content_length) > max_size:
             from fastapi.responses import JSONResponse
             return JSONResponse({"detail": "File too large"}, status_code=413)
-        return await call_next(request)
 
+        return await call_next(request)
+        
 app = FastAPI(title="Well Log System API", version="0.2.0")
 app.add_middleware(LimitUploadSize)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
