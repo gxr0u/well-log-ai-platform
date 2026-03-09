@@ -9,6 +9,8 @@ from app.models.well_log_data import WellLogData
 
 def store_log_data(db, well_id: int, dataframe: pd.DataFrame, batch_size: int = 5000):
     """Efficient batch insertion using streaming batches."""
+    if dataframe.empty:
+        return 0
 
     curves = [c for c in dataframe.columns if c != "depth"]
 
