@@ -9,6 +9,7 @@ from app.models.well_log_data import WellLogData
 
 def store_log_data(db, well_id: int, dataframe: pd.DataFrame, batch_size: int = 5000):
     """Efficient batch insertion using streaming batches."""
+
     if dataframe.empty:
         return 0
 
@@ -17,11 +18,11 @@ def store_log_data(db, well_id: int, dataframe: pd.DataFrame, batch_size: int = 
     inserted = 0
     batch = []
 
-    for row in dataframe.itertuples(index=False):
-        depth = row.depth
+    for _, row in dataframe.iterrows():
+        depth = row["depth"]
 
         for curve in curves:
-            value = getattr(row, curve)
+            value = row[curve]   # <-- FIXED ACCESS
 
             if pd.isna(value):
                 continue
@@ -47,7 +48,7 @@ def store_log_data(db, well_id: int, dataframe: pd.DataFrame, batch_size: int = 
     db.commit()
 
     return inserted
-
+    
 def get_well_logs(
     db: Session,
     well_id: int,
