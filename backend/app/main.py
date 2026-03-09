@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from app.api.interpret_api import router as interpret_router
 from app.api.logs_api import router as logs_router
@@ -21,6 +22,7 @@ class LimitUploadSize(BaseHTTPMiddleware):
 
 app = FastAPI(title="Well Log System API", version="0.2.0")
 app.add_middleware(LimitUploadSize)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Allow local frontend app to call backend APIs.
 app.add_middleware(
