@@ -18,3 +18,5 @@ class WellLogData(Base):
     __table_args__ = (
         Index("ix_well_log_data_well_id_depth", "well_id", "depth"),
     )
+
+    Index("idx_well_depth", WellLogData.well_id, WellLogData.depth)
