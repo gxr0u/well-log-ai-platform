@@ -7,41 +7,35 @@ from sqlalchemy.orm import Session
 from app.models.well_log_data import WellLogData
 
 
-def store_log_data(db, well_id: int, dataframe: pd.DataFrame, batch_size: int = 5000):
-    """Efficient batch insertion using streaming batches."""
+def store_log_data(db, well_id: int, dataframe: pd.DataFrame, batch_size: int = 20000):
+    """High-performance batch insertion using pandas melt."""
 
     if dataframe.empty:
         return 0
 
-    curves = [c for c in dataframe.columns if c != "depth"]
+    # Convert wide dataframe -> long format
+    melted = dataframe.melt(
+        id_vars=["depth"],
+        var_name="curve_name",
+        value_name="value",
+    )
+
+    # Drop NaN values
+    melted = melted.dropna(subset=["value"])
+
+    # Attach well_id
+    melted["well_id"] = well_id
+
+    # Reorder columns
+    melted = melted[["well_id", "depth", "curve_name", "value"]]
 
     inserted = 0
-    batch = []
 
-    for _, row in dataframe.iterrows():
-        depth = row["depth"]
+    records = melted.to_dict(orient="records")
 
-        for curve in curves:
-            value = row[curve]   # <-- FIXED ACCESS
+    for i in range(0, len(records), batch_size):
+        batch = records[i : i + batch_size]
 
-            if pd.isna(value):
-                continue
-
-            batch.append(
-                {
-                    "well_id": well_id,
-                    "depth": float(depth),
-                    "curve_name": curve,
-                    "value": float(value),
-                }
-            )
-
-            if len(batch) >= batch_size:
-                db.bulk_insert_mappings(WellLogData, batch)
-                inserted += len(batch)
-                batch.clear()
-
-    if batch:
         db.bulk_insert_mappings(WellLogData, batch)
         inserted += len(batch)
 
