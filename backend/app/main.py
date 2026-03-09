@@ -9,7 +9,6 @@ from app.api.wells_api import router as wells_router
 from app.db.database import Base, engine
 from app.models import well, well_log_data  # noqa: F401
 
-from fastapi import FastAPI
 from starlette.middleware.base import BaseHTTPMiddleware
 
 class LimitUploadSize(BaseHTTPMiddleware):
