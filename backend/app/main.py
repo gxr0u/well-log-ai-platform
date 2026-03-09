@@ -30,7 +30,11 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 # Allow local frontend app to call backend APIs.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://well-log-ai-platform.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
