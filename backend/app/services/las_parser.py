@@ -18,7 +18,6 @@ def parse_las_file(file_path: str | Path) -> tuple[pd.DataFrame, list[str]]:
 
     # las.df() returns depth-indexed logs; reset index to materialize depth column.
     dataframe = las.df().reset_index().copy()
-    dataframe = dataframe.copy()
     if dataframe.empty:
         raise ValueError("LAS file contains no log data rows")
 
