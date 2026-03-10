@@ -8,10 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.well_log_data import WellLogData
 
 def store_log_data(db: Session, well_id: int, dataframe: pd.DataFrame, batch_size: int = 5000):
-    """
-    Memory-efficient ingestion that avoids pandas melt.
-    Processes curves in batches to stay under Render's 512MB limit.
-    """
+    """Memory-efficient ingestion safe for LAS curve names."""
 
     curves = [c for c in dataframe.columns if c != "depth"]
 
@@ -22,14 +19,14 @@ def store_log_data(db: Session, well_id: int, dataframe: pd.DataFrame, batch_siz
 
         sub_df = dataframe[["depth", curve]].dropna()
 
-        for row in sub_df.itertuples(index=False):
+        for depth, value in sub_df.values:
 
             batch.append(
                 {
                     "well_id": well_id,
-                    "depth": float(row.depth),
+                    "depth": float(depth),
                     "curve_name": curve,
-                    "value": float(getattr(row, curve)),
+                    "value": float(value),
                 }
             )
 
