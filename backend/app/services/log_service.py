@@ -7,30 +7,44 @@ from sqlalchemy.orm import Session
 
 from app.models.well_log_data import WellLogData
 
+def store_log_data(db: Session, well_id: int, dataframe: pd.DataFrame, batch_size: int = 5000):
+    """
+    Memory-efficient ingestion that avoids pandas melt.
+    Processes curves in batches to stay under Render's 512MB limit.
+    """
 
-def store_log_data(db: Session, well_id: int, dataframe: pd.DataFrame) -> int:
-    """Fast batch ingestion compatible with SQLite."""
+    curves = [c for c in dataframe.columns if c != "depth"]
 
-    if dataframe.empty:
-        return 0
+    inserted = 0
+    batch = []
 
-    melted = dataframe.melt(
-        id_vars=["depth"],
-        var_name="curve_name",
-        value_name="value",
-    )
+    for curve in curves:
 
-    melted = melted.dropna(subset=["value"])
-    melted["well_id"] = well_id
+        sub_df = dataframe[["depth", curve]].dropna()
 
-    melted = melted[["well_id", "depth", "curve_name", "value"]]
+        for row in sub_df.itertuples(index=False):
 
-    records = melted.to_dict("records")
+            batch.append(
+                {
+                    "well_id": well_id,
+                    "depth": float(row.depth),
+                    "curve_name": curve,
+                    "value": float(getattr(row, curve)),
+                }
+            )
 
-    db.bulk_insert_mappings(WellLogData, records)
+            if len(batch) >= batch_size:
+                db.bulk_insert_mappings(WellLogData, batch)
+                inserted += len(batch)
+                batch.clear()
+
+    if batch:
+        db.bulk_insert_mappings(WellLogData, batch)
+        inserted += len(batch)
+
     db.commit()
 
-    return len(records)
+    return inserted
     
 def get_well_logs(
     db: Session,
