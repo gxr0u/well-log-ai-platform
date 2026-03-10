@@ -244,6 +244,8 @@ Typical ingestion times:
 | 10k rows | ~5–8 s   |
 | 20k rows | ~10–12 s |
 
+Large LAS files may take ~1 minute to ingest due to SQLite limitations.
+Switching to PostgreSQL reduces ingestion time to ~5 seconds.
 ---
 ## Deployment Note
 
