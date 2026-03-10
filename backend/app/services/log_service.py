@@ -9,12 +9,11 @@ from app.models.well_log_data import WellLogData
 
 
 def store_log_data(db: Session, well_id: int, dataframe: pd.DataFrame) -> int:
-    """High performance ingestion using PostgreSQL COPY."""
+    """Fast batch ingestion compatible with SQLite."""
 
     if dataframe.empty:
         return 0
 
-    # Convert wide → long
     melted = dataframe.melt(
         id_vars=["depth"],
         var_name="curve_name",
@@ -22,30 +21,16 @@ def store_log_data(db: Session, well_id: int, dataframe: pd.DataFrame) -> int:
     )
 
     melted = melted.dropna(subset=["value"])
-
     melted["well_id"] = well_id
 
     melted = melted[["well_id", "depth", "curve_name", "value"]]
 
-    # Convert dataframe → CSV buffer
-    buffer = io.StringIO()
-    melted.to_csv(buffer, index=False, header=False)
-    buffer.seek(0)
+    records = melted.to_dict("records")
 
-    connection = db.connection().connection
-    cursor = connection.cursor()
+    db.bulk_insert_mappings(WellLogData, records)
+    db.commit()
 
-    cursor.copy_expert(
-        """
-        COPY well_log_data (well_id, depth, curve_name, value)
-        FROM STDIN WITH CSV
-        """,
-        buffer,
-    )
-
-    connection.commit()
-
-    return len(melted)
+    return len(records)
     
 def get_well_logs(
     db: Session,
