@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+import io
 import pandas as pd
 from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
@@ -7,41 +8,44 @@ from sqlalchemy.orm import Session
 from app.models.well_log_data import WellLogData
 
 
-def store_log_data(db, well_id: int, dataframe: pd.DataFrame, batch_size: int = 20000):
-    """High-performance batch insertion using pandas melt."""
+def store_log_data(db: Session, well_id: int, dataframe: pd.DataFrame) -> int:
+    """High performance ingestion using PostgreSQL COPY."""
 
     if dataframe.empty:
         return 0
 
-    # Convert wide dataframe -> long format
+    # Convert wide → long
     melted = dataframe.melt(
         id_vars=["depth"],
         var_name="curve_name",
         value_name="value",
     )
 
-    # Drop NaN values
     melted = melted.dropna(subset=["value"])
 
-    # Attach well_id
     melted["well_id"] = well_id
 
-    # Reorder columns
     melted = melted[["well_id", "depth", "curve_name", "value"]]
 
-    inserted = 0
+    # Convert dataframe → CSV buffer
+    buffer = io.StringIO()
+    melted.to_csv(buffer, index=False, header=False)
+    buffer.seek(0)
 
-    records = melted.to_dict(orient="records")
+    connection = db.connection().connection
+    cursor = connection.cursor()
 
-    for i in range(0, len(records), batch_size):
-        batch = records[i : i + batch_size]
+    cursor.copy_expert(
+        """
+        COPY well_log_data (well_id, depth, curve_name, value)
+        FROM STDIN WITH CSV
+        """,
+        buffer,
+    )
 
-        db.bulk_insert_mappings(WellLogData, batch)
-        inserted += len(batch)
+    connection.commit()
 
-    db.commit()
-
-    return inserted
+    return len(melted)
     
 def get_well_logs(
     db: Session,
