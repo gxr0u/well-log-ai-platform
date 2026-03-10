@@ -245,6 +245,14 @@ Typical ingestion times:
 | 20k rows | ~10–12 s |
 
 ---
+## Deployment Note
+
+The backend is hosted on Render free tier.
+
+If the system has been idle, the backend may enter sleep mode.
+The first request may take 10–20 seconds while the server wakes up.
+
+If a "Network Error" appears after upload, please wait briefly and retry.
 
 # Future Improvements
 
