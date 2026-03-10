@@ -40,6 +40,6 @@ def parse_las_file(file_path: str | Path) -> tuple[pd.DataFrame, list[str]]:
         raise ValueError("LAS file does not contain any curves")
 
     for curve in curves:
-        dataframe[curve] = pd.to_numeric(dataframe[curve], errors="coerce")
+        dataframe[curves] = dataframe[curves].apply(pd.to_numeric, errors="coerce")
 
     return dataframe, curves
