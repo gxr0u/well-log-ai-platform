@@ -244,17 +244,54 @@ Typical ingestion times:
 | 10k rows | ~5–8 s   |
 | 20k rows | ~10–12 s |
 
-Large LAS files may take ~1 minute to ingest due to SQLite limitations.
-Switching to PostgreSQL reduces ingestion time to ~5 seconds.
 ---
-## Deployment Note
+# Deployment Limitations
 
-The backend is hosted on Render free tier.
+The backend is deployed on **Render Free Tier**, which has the following constraints:
 
-If the system has been idle, the backend may enter sleep mode.
-The first request may take 10–20 seconds while the server wakes up.
+* **512 MB RAM**
+* **Single CPU**
+* **Service sleeps after inactivity**
 
-If a "Network Error" appears after upload, please wait briefly and retry.
+## Cold Start Behavior
+
+When the backend has been idle, Render puts the service to sleep.
+The first request may take **10–20 seconds** while the server wakes up.
+
+If the frontend shows a **Network Error** during upload:
+
+1. Wait a few seconds
+2. Retry the request
+
+This is expected behavior on free-tier infrastructure.
+
+## Memory Limits
+
+Large LAS files may temporarily exceed the **512MB memory limit**, which can cause the instance to restart with an error similar to:
+
+```
+Instance failed: jbrn2
+Ran out of memory (used over 512MB)
+```
+
+This happens because LAS files are parsed into in-memory pandas DataFrames before being inserted into the database.
+
+For production deployments, this can be resolved by:
+
+* Increasing server memory
+* Using a streaming ingestion pipeline
+* Processing logs in chunks instead of loading the full dataset at once
+
+## Upload Performance
+
+Large well log files may take **30–90 seconds** to ingest due to:
+
+* LAS parsing
+* Data normalization
+* Database insertion
+
+Using **PostgreSQL bulk ingestion** instead of SQLite significantly improves ingestion speed and is recommended for production deployments.
+
 
 # Future Improvements
 
